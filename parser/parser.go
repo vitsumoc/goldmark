@@ -72,26 +72,43 @@ func newIDs() IDs {
 	}
 }
 
+// 这里是逐 byte 处理的，所以无法支持中文
+// 试着改成 rune 处理
 func (s *ids) Generate(value []byte, kind ast.NodeKind) []byte {
+	// 左右去空格
 	value = util.TrimLeftSpace(value)
 	value = util.TrimRightSpace(value)
-	result := []byte{}
-	for i := 0; i < len(value); {
-		v := value[i]
-		l := util.UTF8Len(v)
-		i += int(l)
-		if l != 1 {
-			continue
-		}
-		if util.IsAlphaNumeric(v) {
-			if 'A' <= v && v <= 'Z' {
-				v += 'a' - 'A'
-			}
-			result = append(result, v)
-		} else if util.IsSpace(v) || v == '-' || v == '_' {
-			result = append(result, '-')
+	resultStr := ""
+	// result := []byte{}
+	valueStr := string(value)
+	for _, vStr := range valueStr {
+		if 'A' <= vStr && vStr <= 'Z' {
+			vStr += 'a' - 'A'
+			resultStr += string(vStr)
+		} else if util.IsSpace(byte(vStr)) || vStr == '-' || vStr == '_' {
+			resultStr += "-"
+		} else {
+			resultStr += string(vStr)
 		}
 	}
+	result := []byte(resultStr)
+	// for i := 0; i < len(value); {
+	// 	v := value[i]
+	// 	l := util.UTF8Len(v)
+	// 	i += int(l)
+	// 	if l != 1 {
+	// 		continue
+	// 	}
+	// 	if util.IsAlphaNumeric(v) {
+	// 		if 'A' <= v && v <= 'Z' {
+	// 			v += 'a' - 'A'
+	// 		}
+	// 		result = append(result, v)
+	// 	} else if util.IsSpace(v) || v == '-' || v == '_' {
+	// 		result = append(result, '-')
+	// 	}
+	// }
+	// 默认结果, 不用动
 	if len(result) == 0 {
 		if kind == ast.KindHeading {
 			result = []byte("heading")
@@ -99,6 +116,7 @@ func (s *ids) Generate(value []byte, kind ast.NodeKind) []byte {
 			result = []byte("id")
 		}
 	}
+	// 自动编号的, 不用动
 	if _, ok := s.values[util.BytesToReadOnlyString(result)]; !ok {
 		s.values[util.BytesToReadOnlyString(result)] = true
 		return result
@@ -109,9 +127,49 @@ func (s *ids) Generate(value []byte, kind ast.NodeKind) []byte {
 			s.values[newResult] = true
 			return []byte(newResult)
 		}
-
 	}
 }
+
+// func (s *ids) Generate(value []byte, kind ast.NodeKind) []byte {
+// 	value = util.TrimLeftSpace(value)
+// 	value = util.TrimRightSpace(value)
+// 	result := []byte{}
+// 	for i := 0; i < len(value); {
+// 		v := value[i]
+// 		l := util.UTF8Len(v)
+// 		i += int(l)
+// 		if l != 1 {
+// 			continue
+// 		}
+// 		if util.IsAlphaNumeric(v) {
+// 			if 'A' <= v && v <= 'Z' {
+// 				v += 'a' - 'A'
+// 			}
+// 			result = append(result, v)
+// 		} else if util.IsSpace(v) || v == '-' || v == '_' {
+// 			result = append(result, '-')
+// 		}
+// 	}
+// 	if len(result) == 0 {
+// 		if kind == ast.KindHeading {
+// 			result = []byte("heading")
+// 		} else {
+// 			result = []byte("id")
+// 		}
+// 	}
+// 	if _, ok := s.values[util.BytesToReadOnlyString(result)]; !ok {
+// 		s.values[util.BytesToReadOnlyString(result)] = true
+// 		return result
+// 	}
+// 	for i := 1; ; i++ {
+// 		newResult := fmt.Sprintf("%s-%d", result, i)
+// 		if _, ok := s.values[newResult]; !ok {
+// 			s.values[newResult] = true
+// 			return []byte(newResult)
+// 		}
+
+// 	}
+// }
 
 func (s *ids) Put(value []byte) {
 	s.values[util.BytesToReadOnlyString(value)] = true
